@@ -30,19 +30,10 @@ jobs:
         setup-command: mkdir data
         command: cargo run | jq -e '.padron'
         timeout: 10
-    - name: Ignorar
-      id: ignorar
-      uses: education/autograding-command-grader@v1
-      with:
-        test-name: Ignorar
-        setup-command: ''
-        command: echo "hola"
-        timeout: 10
     - name: Autograding Reporter
       uses: education/autograding-grading-reporter@v1
       env:
         CORRER-TESTS_RESULTS: "${{steps.correr-tests.outputs.result}}"
         CHECK-PADRON_RESULTS: "${{steps.check-padron.outputs.result}}"
-        IGNORAR_RESULTS: "${{steps.ignorar.outputs.result}}"
       with:
-        runners: correr-tests,check-padron,ignorar
+        runners: correr-tests,check-padron
