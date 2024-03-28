@@ -23,7 +23,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn invalid_number_threads() -> Result<(), std::io::Error> {
+    fn invalid_number_worker_threads() -> Result<(), std::io::Error> {
         let vec = vec!["/hi".to_string(), "0".to_string()];
         let config = Config::build(&vec);
         match config {
