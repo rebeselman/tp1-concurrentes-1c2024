@@ -1,58 +1,38 @@
 //! Hi! :), this is my implementation of the tp1
 use config::Config;
+use line::Line;
 use serde_json::{self, json};
+use site::Site;
+use std::collections::HashMap;
 use std::error::Error;
-use std::process::Command;
+use std::fs::File;
+use std::fs::read_dir;
+use std::io::BufRead;
+use std::io::BufReader;
 pub mod config;
+pub mod line;
+pub mod site;
+pub mod tag;
+pub mod totals;
+
 
 /// Function which runs the application
 pub fn run(_config: Config) -> Result<(), Box<dyn Error>> {
-    // descomprimir en la carpeta data usando el comando download_data.s
-    let coso = Command::new("/bin/sh").arg("download_data.sh").output()?;
-    println!("{:?}", coso);
-    let json_data = json!({
-            "padron": 108672,
-            "sites": {
-                "site1": {
-                    "questions": "cantidad total de preguntas para ese sitio>",
-                    "words": "cantidad total de palabras para ese sitio",
-                    "tags": {
-                        "tag1": {
-                            "questions": "cantidad total de preguntas para ese tag para ese sitio",
-                            "words": "cantidad total palabras para ese tag para ese sitio",
-                        },
-
-                        "tagN": {
-
-                        },
-                    },
-                    "chatty_tags": [
-                        "tag1", "tag2"
-                    ]
-                },
-                "siteN" : {
-                }
-            },
-            "tags": {
-                "tag1": {
-                    "questions": "cantidad total de preguntas para ese tag para todos los sitios",
-                    "words": "cantidad total palabras para ese tag para todos los sitios",
-                },
-                "tagN": {
-
-                },
-            },
-            "totals": {
-                "chatty_sites": [
-                    "site1", "site2"
-                ],
-                "chatty_tags": [
-                    "tag1", "tag2"
-                ]
-            }
-    });
-    let formatted_json = serde_json::to_string_pretty(&json_data).map_err(|err| err.to_string())?;
-    println!("{}", formatted_json);
+    // Command::new("/bin/sh").arg("download_data.sh").output()?;
+    // let result = read_dir("/data1").unwrap()
+    // .map(|d| d.unwrap().path())
+    // .flat_map(|path| {
+    //     let file = File::open(path);
+    //     let reader = BufReader::new(file.unwrap());
+    //     reader.lines()
+    // })
+    // .map(|l| {
+    //     let l = l?;
+    //     let line: Line = serde_json::from_str(&l)?;
+    //     let mut counts = HashMap::new();
+    //     words.for_each(|w| *counts.entry(w.to_string()).or_insert(0) += 1);
+    //     counts
+    // }).fold(init, f);
 
     Ok(())
 }
