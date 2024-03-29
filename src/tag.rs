@@ -7,5 +7,5 @@ use serde::{Deserialize, Serialize};
 ///     words:  <cantidad total palabras para ese tag para todos los sitios>
 pub struct Tag {
     pub questions: u32,
-    pub words: u32
+    pub words: u32,
 }

@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::tag::Tag;
+use serde::{Deserialize, Serialize};
 
 /// It represent a site of stackexchange (a line of the data)
 /// The attributes are:

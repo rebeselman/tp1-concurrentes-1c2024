@@ -1,20 +1,19 @@
 //! Hi! :), this is my implementation of the tp1
 use config::Config;
-use line::Line;
-use serde_json::{self, json};
-use site::Site;
-use std::collections::HashMap;
+// use line::Line;
+//use serde_json::{self, json};
+// use site::Site;
+// use std::collections::HashMap;
 use std::error::Error;
-use std::fs::File;
-use std::fs::read_dir;
-use std::io::BufRead;
-use std::io::BufReader;
+// use std::fs::read_dir;
+// use std::fs::File;
+// use std::io::BufRead;
+// use std::io::BufReader;
 pub mod config;
 pub mod line;
 pub mod site;
 pub mod tag;
 pub mod totals;
-
 
 /// Function which runs the application
 pub fn run(_config: Config) -> Result<(), Box<dyn Error>> {
