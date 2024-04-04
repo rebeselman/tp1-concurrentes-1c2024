@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use crate::tag::Tag;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// It represent a site of stackexchange (a line of the data)
 /// The attributes are:
@@ -22,7 +22,7 @@ impl Site {
             questions: 0,
             words: 0,
             tags: HashMap::new(),
-            chatty_tags: vec![]
+            chatty_tags: vec![],
         }
     }
     /// add  to the number of questions
@@ -35,19 +35,21 @@ impl Site {
         self.words += words_number
     }
 
-    /// modify values of tags 
-    pub fn add_tags(&mut self, tags: &HashMap<String, Tag>){
-        for e in tags.into_iter(){
+    /// modify values of tags
+    pub fn add_tags(&mut self, tags: &HashMap<String, Tag>) {
+        for e in tags.iter() {
             self.tags.insert(e.0.to_owned(), e.1.to_owned());
         }
     }
 
     /// caculate_chatty_tags and set
-    pub fn chatty_tags(&mut self){
+    pub fn chatty_tags(&mut self) {
         // Creamos un vector de tuplas que contenga el nombre del tag y la relación number_of_words/number_of_questions
-        let mut tag_ratios: Vec<(&String, f64)> = self.tags.iter()
-        .map(|(name, tag)| (name, tag.words as f64 / tag.questions as f64))
-        .collect();
+        let mut tag_ratios: Vec<(&String, f64)> = self
+            .tags
+            .iter()
+            .map(|(name, tag)| (name, tag.words as f64 / tag.questions as f64))
+            .collect();
 
         // Ordenamos el vector de tuplas por la relación number_of_words/number_of_questions en orden descendente
         tag_ratios.sort_by(|(_, ratio1), (_, ratio2)| ratio2.partial_cmp(ratio1).unwrap());
@@ -57,8 +59,6 @@ impl Site {
 
         //seteamos los chatty tags
         self.chatty_tags = top_10_tags.iter().map(|s| s.to_string()).collect();
-
-        
     }
 }
 

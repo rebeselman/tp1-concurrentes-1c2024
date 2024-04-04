@@ -1,4 +1,5 @@
 //! Hi! :), this is my implementation of the tp1
+use crate::tag::Tag;
 use config::Config;
 use question::Question;
 use serde_json::{self, json};
@@ -9,7 +10,7 @@ use std::fs;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-use crate::tag::Tag;
+use std::process::Command;
 pub mod config;
 pub mod question;
 pub mod site;
@@ -18,11 +19,12 @@ pub mod totals;
 
 /// Function which runs the application
 pub fn run(_config: Config) -> Result<(), Box<dyn Error>> {
-    //Command::new("/bin/sh").arg("download_data.sh").output()?;
-    let mut sites: HashMap<String, Site> = HashMap::new();
-    let mut tags: HashMap<String, Tag> =  HashMap::new();
+    Command::new("/bin/sh").arg("download_data.sh").output()?;
 
-    let iter_directory = fs::read_dir("data1")?;
+    let mut sites: HashMap<String, Site> = HashMap::new();
+    let mut tags: HashMap<String, Tag> = HashMap::new();
+
+    let iter_directory = fs::read_dir("data")?;
 
     for entry in iter_directory {
         let entry = entry?;
@@ -32,11 +34,11 @@ pub fn run(_config: Config) -> Result<(), Box<dyn Error>> {
         let site = Site::new();
 
         // new tags for entry
-        let tags_for_site: &mut HashMap<String, Tag> =  &mut HashMap::new();
+        let tags_for_site: &mut HashMap<String, Tag> = &mut HashMap::new();
 
         // insert new site == line in sites hashmap
         sites.insert(name_site.clone(), site);
-        
+
         let reader = BufReader::new(File::open(entry.path())?);
 
         for line in reader.lines() {
@@ -45,7 +47,6 @@ pub fn run(_config: Config) -> Result<(), Box<dyn Error>> {
             let question: Question = serde_json::from_str(&line)?;
 
             if let Some(site) = sites.get_mut(&name_site) {
-
                 // add number of questions
                 site.sum_questions(1);
 
@@ -57,41 +58,32 @@ pub fn run(_config: Config) -> Result<(), Box<dyn Error>> {
 
                 // add number of words
                 site.sum_words(words_number);
-                
+
                 // add tags of this site
                 question.tags.into_iter().for_each(|tag_name| {
-                    if let Some(tag) = tags_for_site.get_mut(&tag_name){
+                    if let Some(tag) = tags_for_site.get_mut(&tag_name) {
                         tag.sum_questions(1);
                         tag.sum_words(words_number);
-
-                        
-                    }
-                    else {
+                    } else {
                         tags_for_site.insert(tag_name.to_owned(), Tag::new_with(1, words_number));
                     }
 
                     // global tag!!!
-                    if let Some(tag) = tags.get_mut(&tag_name){
+                    if let Some(tag) = tags.get_mut(&tag_name) {
                         tag.sum_questions(1);
                         tag.sum_words(words_number);
-
-                        
-                    }
-                    else {
+                    } else {
                         tags.insert(tag_name, Tag::new_with(1, words_number));
                     }
                 });
-
             }
 
-        if let Some(site) = sites.get_mut(&name_site) {
-            site.add_tags(tags_for_site);
-            site.chatty_tags();
-        }
-    
+            if let Some(site) = sites.get_mut(&name_site) {
+                site.add_tags(tags_for_site);
+                site.chatty_tags();
+            }
         }
     }
-
 
     // Crear la estructura JSON
     let json_data = json!({

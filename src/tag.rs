@@ -10,18 +10,20 @@ pub struct Tag {
     pub words: usize,
 }
 
-
 impl Tag {
     /// To obtain a new tag
-    pub fn new_with(question: usize, words: usize) -> Self{
-        Tag {questions: question , words: words}
+    pub fn new_with(question: usize, wordss: usize) -> Self {
+        Tag {
+            questions: question,
+            words: wordss,
+        }
     }
 
     /// add  to the number of questions
     pub fn sum_questions(&mut self, questions_number: usize) {
         self.questions += questions_number
     }
-    
+
     /// add to the number of words
     pub fn sum_words(&mut self, words_number: usize) {
         self.words += words_number
