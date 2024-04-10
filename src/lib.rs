@@ -2,6 +2,7 @@
 use config::Config;
 
 use question::Question;
+use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 use serde_json::{self, json};
 use site::Site;
 use tag::Tag;
@@ -9,9 +10,11 @@ use tag::Tag;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::{self, File};
-use std::io::{self, BufRead, BufReader};
+use std::io::{self, BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::thread;
+
+use crate::totals::Totals;
 
 pub mod config;
 pub mod question;
@@ -39,9 +42,7 @@ fn process_files_in_parallel(
     for handle in thread_handles {
         if let Ok(r) = handle.join() {
             sites.extend(r);
-        } else {
-            // Manejar errores de los threads si es necesario
-        }
+        } 
     }
 
     Ok(sites)
@@ -72,7 +73,7 @@ fn process_files(worklist: Vec<PathBuf>) -> HashMap<String, Site> {
     // Aquí deberías realizar el procesamiento real de los archivos y crear objetos Site
     // En esta versión de ejemplo, simplemente se devuelve un objeto Site ficticio
     let sites: HashMap<String, Site> = worklist
-        .iter()
+        .par_iter()
         .map(|path| {
             let site = match process_file(path.to_path_buf()) {
                 Ok(site) => site,
@@ -94,7 +95,7 @@ fn process_files(worklist: Vec<PathBuf>) -> HashMap<String, Site> {
 pub fn run(c: Config) -> Result<(), Box<dyn Error>> {
     //Command::new("/bin/sh").arg("download_data.sh").output()?;
 
-    let file_paths: Vec<PathBuf> = fs::read_dir("data")?
+    let file_paths: Vec<PathBuf> = fs::read_dir("data1")?
         .map(|entry| match entry {
             Ok(entry) => entry.path(),
             Err(_) => PathBuf::new(),
@@ -112,16 +113,28 @@ pub fn run(c: Config) -> Result<(), Box<dyn Error>> {
     // Procesar los archivos en paralelo y obtener los sitios
     let sites = process_files_in_parallel(file_paths, c.number_of_threads)?;
 
+    let tags: HashMap<String, Tag> = sites
+    .par_iter()
+    .map(|s| s.1.obtain_tags())
+    .reduce(|| HashMap::new(), |acc, c|{
+        merge_tag_maps(acc, c)
+    });
+
+    let totals: Totals = Totals::new_from(&tags, &sites);
+
     // Crear la estructura JSON
     let json_data = json!({
         "padron": 108672,
         "sites": sites,
+        "tags": tags,
+        "totals": totals
+        
     });
-    //let mut file = File::create("cosa-horrorosa")?;
+    let mut file = File::create("cosa-horrorosa")?;
 
     // Convertir el objeto JSON a una cadena con formato JSON ordenado
     let formatted_json = serde_json::to_string_pretty(&json_data)?;
-    //file.write_all(formatted_json.as_bytes())?;
+    file.write_all(formatted_json.as_bytes())?;
     println!("{}", formatted_json);
     Ok(())
 }
@@ -133,22 +146,27 @@ fn process_file(path: PathBuf) -> Result<Site, io::Error> {
     let reader = BufReader::new(file);
     let results = reader
         .lines()
+        .par_bridge()
         .map(|l| match l {
             Ok(line) => process_line(line),
             Err(_) => (0, 0, HashMap::new()),
         })
         .filter(|res| !res.2.is_empty())
-        .fold((0, 0, HashMap::new()), |mut acc, res| {
-            acc.2.extend(res.2);
-            (res.0 + acc.0, res.1 + acc.1, acc.2)
+        .reduce(|| (0, 0, HashMap::new()), |acc, res| {
+            let merged_tags: HashMap<String, Tag> = merge_tag_maps(acc.2, res.2);
+            (res.0 + acc.0, res.1 + acc.1, merged_tags)
         });
 
-    Ok(Site {
+    let mut site = Site {
         questions: results.1,
         words: results.0,
         tags: results.2,
         chatty_tags: vec![],
-    })
+    };
+    // calculate chatty tags for this site
+    site.chatty_tags();
+    Ok(site)
+    
 }
 
 /// Procesa la línea y devuelve para ella: (cantidad de palabras, cantidad de preguntas, hash con todos los tags para dicho sitio)
@@ -166,12 +184,7 @@ fn process_line(line: String) -> (usize, usize, HashMap<String, Tag>) {
                 .tags
                 .into_iter()
                 .fold(HashMap::new(), |mut acc, tag| {
-                    acc.entry(tag)
-                        .and_modify(|tag: &mut Tag| {
-                            tag.sum_questions(1);
-                            tag.sum_words(words_number)
-                        })
-                        .or_insert_with_key(|_| Tag::new_with(1, words_number));
+                    acc.insert(tag, Tag::new_with(1, words_number));
                     acc
                 });
             (words_number, question_number, hash_tags)
@@ -179,4 +192,22 @@ fn process_line(line: String) -> (usize, usize, HashMap<String, Tag>) {
         // si hay error simplemente no se cuenta nada y luego se filtra
         Err(_) => (0, 0, HashMap::new()),
     }
+}
+
+
+// Función para fusionar dos HashMap<String, Tag> sumando los valores de las entradas comunes
+fn merge_tag_maps(map1: HashMap<String, Tag>, mut map2: HashMap<String, Tag>) -> HashMap<String, Tag> {
+    for (key, tag) in map1 {
+        // Comprobar si la clave existe en map2
+        if let Some(existing_tag) = map2.get_mut(&key) {
+            // Si la clave existe en map2, sumar los valores de questions y words
+            existing_tag.sum_questions(tag.questions);
+            existing_tag.sum_words(tag.words);
+        } else {
+            // Si la clave no existe en map2, insertar la entrada de map1 en map2
+            map2.insert(key, tag);
+        }
+    }
+
+    map2
 }

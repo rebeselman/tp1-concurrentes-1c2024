@@ -1,6 +1,6 @@
 use crate::tag::Tag;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{cmp::Ordering, collections::HashMap};
 
 /// It represent a site of stackexchange (a line of the data)
 /// The attributes are:
@@ -42,9 +42,14 @@ impl Site {
         }
     }
 
+    pub fn obtain_tags(&self) -> HashMap<String, Tag> {
+        self.tags.clone()
+    }
+
+
     /// caculate_chatty_tags and set
     pub fn chatty_tags(&mut self) {
-        // Creamos un vector de tuplas que contenga el nombre del tag y la relación number_of_words/number_of_questions
+
         let mut tag_ratios: Vec<(&String, f64)> = self
             .tags
             .iter()
@@ -52,12 +57,16 @@ impl Site {
             .collect();
 
         // Ordenamos el vector de tuplas por la relación number_of_words/number_of_questions en orden descendente
-        tag_ratios.sort_by(|(_, ratio1), (_, ratio2)| ratio2.partial_cmp(ratio1).unwrap());
+        tag_ratios.sort_by(|(_, ratio1), (_, ratio2)| match ratio2.partial_cmp(ratio1) {
+            Some(o) => o,
+            None => Ordering::Equal,
+        });
 
         // Tomamos los primeros 10 elementos del vector
         let top_10_tags: Vec<&String> = tag_ratios.iter().take(10).map(|(name, _)| *name).collect();
+       
 
-        //seteamos los chatty tags
+        // seteamos los chatty tags
         self.chatty_tags = top_10_tags.iter().map(|s| s.to_string()).collect();
     }
 }
