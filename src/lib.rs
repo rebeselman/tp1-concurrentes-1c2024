@@ -2,8 +2,9 @@
 use config::Config;
 
 use question::Question;
-use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
-use serde_json::{self, json};
+
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use serde_json::{self, json, to_vec};
 use site::Site;
 use tag::Tag;
 
@@ -40,18 +41,26 @@ fn process_files_in_parallel(
     println!("len de files: {:?} chunk size: {}", file_name_len, chunk_size);
 
 
-    let mut thread_handles = vec![];
-    for worklist in worklists {
-        thread_handles.push(thread::spawn(move || process_files(worklist)));
-    }
+   // let mut thread_handles = vec![];
+    // for worklist in worklists {
+    //     thread_handles.push(thread::spawn(move || process_files(worklist)));
+    // }
 
-    let mut sites = HashMap::new();
+    let sites: HashMap<String, Site> = 
+    worklists
+    .par_iter()
+    .map(|worklist|{
+        process_files(worklist.to_vec())
+    }).reduce(|| HashMap::new(), |mut acc, c| {
+        acc.extend(c);
+        acc
+    });
 
-    for handle in thread_handles {
-        if let Ok(r) = handle.join() {
-            sites.extend(r);
-        }
-    }
+    // for handle in thread_handles {
+    //     if let Ok(r) = handle.join() {
+    //         sites.extend(r);
+    //     }
+    // }
 
     Ok(sites)
 }
@@ -80,23 +89,47 @@ fn split_vec_into_chunks<T: Clone>(vec: Vec<T>, chunk_size: usize) -> Vec<Vec<T>
 fn process_files(worklist: Vec<PathBuf>) -> HashMap<String, Site> {
     // Aquí deberías realizar el procesamiento real de los archivos y crear objetos Site
     // En esta versión de ejemplo, simplemente se devuelve un objeto Site ficticio
-    let sites: HashMap<String, Site> = worklist
-        .par_iter()
-        .map(|path| {
+
+    // let sites: HashMap<String, Site> = worklist
+    //     .iter()
+    //     .map(|path| {
+    //         let site = match process_file(path.to_path_buf()) {
+    //             Ok(site) => site,
+    //             Err(_) => Site::new(),
+    //         };
+            
+    //         let name_site = match path.file_name() {
+    //             Some(name) => name.to_string_lossy().to_string(),
+    //             None => String::new(),
+    //         };
+            
+    //         (name_site, site)
+    //     })
+    //     .filter(|tuple| !tuple.0.is_empty())
+    //     .collect();
+    let mut sites: HashMap<String, Site> = HashMap::new();
+    
+    worklist
+        .iter()
+        .for_each(|path| {
             let site = match process_file(path.to_path_buf()) {
                 Ok(site) => site,
                 Err(_) => Site::new(),
             };
+            
             let name_site = match path.file_name() {
                 Some(name) => name.to_string_lossy().to_string(),
                 None => String::new(),
             };
-
-            (name_site, site)
-        })
-        .filter(|tuple| !tuple.0.is_empty())
-        .collect();
-    println!("{:?}", sites);
+            
+            if !name_site.is_empty(){
+                println!("site procesado: {:?}", &name_site);
+                sites.insert(name_site, site);
+                
+            }
+        });
+       
+    
     sites
     
 }
@@ -157,14 +190,13 @@ fn process_file(path: PathBuf) -> Result<Site, io::Error> {
     let reader = BufReader::new(file);
     let results = reader
         .lines()
-        .par_bridge()
+
         .map(|l| match l {
             Ok(line) => process_line(line),
             Err(_) => (0, 0, HashMap::new()),
         })
         .filter(|res| !res.2.is_empty())
-        .reduce(
-            || (0, 0, HashMap::new()),
+        .fold((0, 0, HashMap::new()),
             |acc, res| {
                 let merged_tags: HashMap<String, Tag> = merge_tag_maps(acc.2, res.2);
                 (res.0 + acc.0, res.1 + acc.1, merged_tags)
