@@ -372,8 +372,8 @@
     "aviation.stackexchange.com.jsonl": {
       "chatty_tags": [
         "boeing-307-stratoliner",
-        "upforce",
         "downforce",
+        "upforce",
         "tu-104",
         "dassault-mercure",
         "convair-240-family",
@@ -11254,24 +11254,18 @@
   },
   "totals": {
     "chatty_sites": [
-      "masters",
-      "students",
-      "advisor",
-      "boeing-307-stratoliner",
-      "upforce",
-      "downforce",
-      "plagiarism",
-      "tu-104",
-      "dassault-mercure",
-      "convair-240-family"
+      "academiaa.stackexchange.jsonl",
+      "aviation.stackexchange.com.jsonl",
+      "french.stackexchange.com.jsonl",
+      "animee.stackexchange.com.jsonl"
     ],
     "chatty_tags": [
-      "masters",
-      "students",
       "advisor",
+      "students",
+      "masters",
       "boeing-307-stratoliner",
-      "upforce",
       "downforce",
+      "upforce",
       "plagiarism",
       "tu-104",
       "dassault-mercure",

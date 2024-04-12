@@ -13,6 +13,7 @@ use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::thread;
+use std::time::Instant;
 
 use crate::totals::Totals;
 
@@ -32,6 +33,7 @@ fn process_files_in_parallel(
     let worklists = split_vec_into_chunks(filenames, number_of_threads);
 
     let mut thread_handles = vec![];
+    println!("Worklists: {:?}", worklists);
 
     for worklist in worklists {
         thread_handles.push(thread::spawn(move || process_files(worklist)));
@@ -42,7 +44,7 @@ fn process_files_in_parallel(
     for handle in thread_handles {
         if let Ok(r) = handle.join() {
             sites.extend(r);
-        } 
+        }
     }
 
     Ok(sites)
@@ -94,7 +96,7 @@ fn process_files(worklist: Vec<PathBuf>) -> HashMap<String, Site> {
 /// Function which runs the application
 pub fn run(c: Config) -> Result<(), Box<dyn Error>> {
     //Command::new("/bin/sh").arg("download_data.sh").output()?;
-
+    let start = Instant::now();
     let file_paths: Vec<PathBuf> = fs::read_dir("data1")?
         .map(|entry| match entry {
             Ok(entry) => entry.path(),
@@ -109,17 +111,17 @@ pub fn run(c: Config) -> Result<(), Box<dyn Error>> {
         })
         .collect();
 
-    println!("{:?}", file_paths);
-    // Procesar los archivos en paralelo y obtener los sitios
+    println!("File paths: {:?}", file_paths);
+    // Process
     let sites = process_files_in_parallel(file_paths, c.number_of_threads)?;
 
+    // utilizo un iterador paralelo para obtener los tags.
     let tags: HashMap<String, Tag> = sites
-    .par_iter()
-    .map(|s| s.1.obtain_tags())
-    .reduce(|| HashMap::new(), |acc, c|{
-        merge_tag_maps(acc, c)
-    });
+        .par_iter()
+        .map(|s| s.1.obtain_tags())
+        .reduce(|| HashMap::new(), |acc, c| merge_tag_maps(acc, c));
 
+    // para los totals no.
     let totals: Totals = Totals::new_from(&tags, &sites);
 
     // Crear la estructura JSON
@@ -128,14 +130,15 @@ pub fn run(c: Config) -> Result<(), Box<dyn Error>> {
         "sites": sites,
         "tags": tags,
         "totals": totals
-        
+
     });
+    println!("{:?}", start.elapsed());
     let mut file = File::create("cosa-horrorosa")?;
 
     // Convertir el objeto JSON a una cadena con formato JSON ordenado
     let formatted_json = serde_json::to_string_pretty(&json_data)?;
     file.write_all(formatted_json.as_bytes())?;
-    println!("{}", formatted_json);
+    //println!("{}", formatted_json);
     Ok(())
 }
 
@@ -152,10 +155,13 @@ fn process_file(path: PathBuf) -> Result<Site, io::Error> {
             Err(_) => (0, 0, HashMap::new()),
         })
         .filter(|res| !res.2.is_empty())
-        .reduce(|| (0, 0, HashMap::new()), |acc, res| {
-            let merged_tags: HashMap<String, Tag> = merge_tag_maps(acc.2, res.2);
-            (res.0 + acc.0, res.1 + acc.1, merged_tags)
-        });
+        .reduce(
+            || (0, 0, HashMap::new()),
+            |acc, res| {
+                let merged_tags: HashMap<String, Tag> = merge_tag_maps(acc.2, res.2);
+                (res.0 + acc.0, res.1 + acc.1, merged_tags)
+            },
+        );
 
     let mut site = Site {
         questions: results.1,
@@ -166,7 +172,6 @@ fn process_file(path: PathBuf) -> Result<Site, io::Error> {
     // calculate chatty tags for this site
     site.chatty_tags();
     Ok(site)
-    
 }
 
 /// Procesa la línea y devuelve para ella: (cantidad de palabras, cantidad de preguntas, hash con todos los tags para dicho sitio)
@@ -194,20 +199,16 @@ fn process_line(line: String) -> (usize, usize, HashMap<String, Tag>) {
     }
 }
 
-
 // Función para fusionar dos HashMap<String, Tag> sumando los valores de las entradas comunes
-fn merge_tag_maps(map1: HashMap<String, Tag>, mut map2: HashMap<String, Tag>) -> HashMap<String, Tag> {
-    for (key, tag) in map1 {
-        // Comprobar si la clave existe en map2
-        if let Some(existing_tag) = map2.get_mut(&key) {
-            // Si la clave existe en map2, sumar los valores de questions y words
-            existing_tag.sum_questions(tag.questions);
-            existing_tag.sum_words(tag.words);
-        } else {
-            // Si la clave no existe en map2, insertar la entrada de map1 en map2
-            map2.insert(key, tag);
-        }
-    }
-
-    map2
+fn merge_tag_maps(map1: HashMap<String, Tag>, map2: HashMap<String, Tag>) -> HashMap<String, Tag> {
+    let merged_tag = map1.iter().fold(map2, |mut acc, tag| {
+        acc.entry(tag.0.to_owned())
+            .and_modify(|t| {
+                t.sum_questions(tag.1.questions);
+                t.sum_words(tag.1.words)
+            })
+            .or_insert(tag.1.clone());
+        acc
+    });
+    merged_tag
 }

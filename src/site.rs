@@ -17,6 +17,7 @@ pub struct Site {
 }
 
 impl Site {
+    /// Create new Site tags
     pub fn new() -> Site {
         Site {
             questions: 0,
@@ -46,27 +47,26 @@ impl Site {
         self.tags.clone()
     }
 
-
-    /// caculate_chatty_tags and set
+    /// Caculate_chatty_tags and set
     pub fn chatty_tags(&mut self) {
-
         let mut tag_ratios: Vec<(&String, f64)> = self
             .tags
             .iter()
             .map(|(name, tag)| (name, tag.words as f64 / tag.questions as f64))
             .collect();
 
-        // Ordenamos el vector de tuplas por la relación number_of_words/number_of_questions en orden descendente
-        tag_ratios.sort_by(|(_, ratio1), (_, ratio2)| match ratio2.partial_cmp(ratio1) {
-            Some(o) => o,
-            None => Ordering::Equal,
-        });
+        // order tags by ratio number_of_words/number_of_questions in descendent order
+        tag_ratios.sort_by(
+            |(_, ratio1), (_, ratio2)| match ratio2.partial_cmp(ratio1) {
+                Some(o) => o,
+                None => Ordering::Equal,
+            },
+        );
 
-        // Tomamos los primeros 10 elementos del vector
+        // take first ten tags
         let top_10_tags: Vec<&String> = tag_ratios.iter().take(10).map(|(name, _)| *name).collect();
-       
 
-        // seteamos los chatty tags
+        // set chatty tags
         self.chatty_tags = top_10_tags.iter().map(|s| s.to_string()).collect();
     }
 }
