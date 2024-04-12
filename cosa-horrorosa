@@ -3,9 +3,9 @@
   "sites": {
     "academiaa.stackexchange.jsonl": {
       "chatty_tags": [
-        "masters",
-        "students",
         "advisor",
+        "students",
+        "masters",
         "plagiarism",
         "career-path",
         "data",
@@ -160,13 +160,13 @@
         "knights-of-sidonia",
         "miss-kobayashis-dragon-maid",
         "tropes",
-        "amv",
         "terminology",
+        "amv",
         "shindo",
         "haruhi-suzumiya",
         "anime-history",
         "anime-production",
-        "nasuverse"
+        "type-moon"
       ],
       "questions": 52,
       "tags": {
@@ -11260,12 +11260,12 @@
       "animee.stackexchange.com.jsonl"
     ],
     "chatty_tags": [
+      "masters",
       "advisor",
       "students",
-      "masters",
       "boeing-307-stratoliner",
-      "downforce",
       "upforce",
+      "downforce",
       "plagiarism",
       "tu-104",
       "dassault-mercure",

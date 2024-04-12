@@ -30,11 +30,17 @@ fn process_files_in_parallel(
 ) -> io::Result<HashMap<String, Site>> {
     //let worklists = split_vec_into_chunks(filenames, number_of_threads);
 
-    let worklists = split_vec_into_chunks(filenames, number_of_threads);
+    let file_name_len = filenames.len();
+ 
+    let chunk_size = file_name_len / number_of_threads;
+    
+    let worklists = split_vec_into_chunks(filenames, chunk_size);
+    
+    
+    println!("len de files: {:?} chunk size: {}", file_name_len, chunk_size);
+
 
     let mut thread_handles = vec![];
-    println!("Worklists: {:?}", worklists);
-
     for worklist in worklists {
         thread_handles.push(thread::spawn(move || process_files(worklist)));
     }
@@ -90,14 +96,16 @@ fn process_files(worklist: Vec<PathBuf>) -> HashMap<String, Site> {
         })
         .filter(|tuple| !tuple.0.is_empty())
         .collect();
+    println!("{:?}", sites);
     sites
+    
 }
 
 /// Function which runs the application
 pub fn run(c: Config) -> Result<(), Box<dyn Error>> {
     //Command::new("/bin/sh").arg("download_data.sh").output()?;
     let start = Instant::now();
-    let file_paths: Vec<PathBuf> = fs::read_dir("data1")?
+    let file_paths: Vec<PathBuf> = fs::read_dir("data")?
         .map(|entry| match entry {
             Ok(entry) => entry.path(),
             Err(_) => PathBuf::new(),
@@ -111,7 +119,7 @@ pub fn run(c: Config) -> Result<(), Box<dyn Error>> {
         })
         .collect();
 
-    println!("File paths: {:?}", file_paths);
+    //println!("File paths: {:?}", file_paths);
     // Process
     let sites = process_files_in_parallel(file_paths, c.number_of_threads)?;
 
