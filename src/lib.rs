@@ -3,7 +3,7 @@ use config::Config;
 
 use question::Question;
 
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 use serde_json::{self, json, to_vec};
 use site::Site;
 use tag::Tag;
@@ -90,9 +90,28 @@ fn process_files(worklist: Vec<PathBuf>) -> HashMap<String, Site> {
     // Aquí deberías realizar el procesamiento real de los archivos y crear objetos Site
     // En esta versión de ejemplo, simplemente se devuelve un objeto Site ficticio
 
-    // let sites: HashMap<String, Site> = worklist
+    let sites: HashMap<String, Site> = worklist
+        .par_iter()
+        .map(|path| {
+            let site = match process_file(path.to_path_buf()) {
+                Ok(site) => site,
+                Err(_) => Site::new(),
+            };
+            
+            let name_site = match path.file_name() {
+                Some(name) => name.to_string_lossy().to_string(),
+                None => String::new(),
+            };
+            println!("site: {}", name_site);
+            (name_site, site)
+        })
+        .filter(|tuple| !tuple.0.is_empty())
+        .collect();
+    //let mut sites: HashMap<String, Site> = HashMap::new();
+    
+    // worklist
     //     .iter()
-    //     .map(|path| {
+    //     .for_each(|path| {
     //         let site = match process_file(path.to_path_buf()) {
     //             Ok(site) => site,
     //             Err(_) => Site::new(),
@@ -103,31 +122,12 @@ fn process_files(worklist: Vec<PathBuf>) -> HashMap<String, Site> {
     //             None => String::new(),
     //         };
             
-    //         (name_site, site)
-    //     })
-    //     .filter(|tuple| !tuple.0.is_empty())
-    //     .collect();
-    let mut sites: HashMap<String, Site> = HashMap::new();
-    
-    worklist
-        .iter()
-        .for_each(|path| {
-            let site = match process_file(path.to_path_buf()) {
-                Ok(site) => site,
-                Err(_) => Site::new(),
-            };
-            
-            let name_site = match path.file_name() {
-                Some(name) => name.to_string_lossy().to_string(),
-                None => String::new(),
-            };
-            
-            if !name_site.is_empty(){
-                println!("site procesado: {:?}", &name_site);
-                sites.insert(name_site, site);
+    //         if !name_site.is_empty(){
+    //             println!("site procesado: {:?}", &name_site);
+    //             sites.insert(name_site, site);
                 
-            }
-        });
+    //         }
+    //     });
        
     
     sites
@@ -190,13 +190,14 @@ fn process_file(path: PathBuf) -> Result<Site, io::Error> {
     let reader = BufReader::new(file);
     let results = reader
         .lines()
-
+        .par_bridge()
         .map(|l| match l {
             Ok(line) => process_line(line),
             Err(_) => (0, 0, HashMap::new()),
         })
         .filter(|res| !res.2.is_empty())
-        .fold((0, 0, HashMap::new()),
+        .reduce(
+            || (0, 0, HashMap::new()),
             |acc, res| {
                 let merged_tags: HashMap<String, Tag> = merge_tag_maps(acc.2, res.2);
                 (res.0 + acc.0, res.1 + acc.1, merged_tags)
@@ -210,7 +211,9 @@ fn process_file(path: PathBuf) -> Result<Site, io::Error> {
         chatty_tags: vec![],
     };
     // calculate chatty tags for this site
+    
     site.chatty_tags();
+    
     Ok(site)
 }
 
@@ -221,18 +224,18 @@ fn process_line(line: String) -> (usize, usize, HashMap<String, Tag>) {
             // cuento cantidad de palabras para esta pregunta
             let words_number = question
                 .texts
-                .into_iter()
-                .fold(0, |acc, text| text.split_whitespace().count() + acc);
+                .par_iter()
+                .map(|c| c.split_whitespace().count())
+                .reduce(|| 0, |acc, c| c + acc);
             // obtengo cantidad de preguntas hasta ahora
-            let question_number: usize = 1;
-            let hash_tags = question
+           
+            let hash_tag: HashMap<String, Tag> = question
                 .tags
-                .into_iter()
-                .fold(HashMap::new(), |mut acc, tag| {
-                    acc.insert(tag, Tag::new_with(1, words_number));
-                    acc
-                });
-            (words_number, question_number, hash_tags)
+                .par_iter()
+                .map(|t| (String::from(t), Tag::new_with(1, words_number)))
+                .collect();
+
+            (words_number, 1, hash_tag)
         }
         // si hay error simplemente no se cuenta nada y luego se filtra
         Err(_) => (0, 0, HashMap::new()),
