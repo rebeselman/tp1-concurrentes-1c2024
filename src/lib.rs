@@ -3,14 +3,11 @@ use config::Config;
 use serde_json::{self, json};
 use std::error::Error;
 
+use crate::process::process_files_in_parallel;
+use crate::totals::Totals;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-//use std::time::Instant;
-//use std::time::Instant;
-
-use crate::process::process_files_in_parallel;
-use crate::totals::Totals;
 
 pub mod process;
 pub mod utilities;
@@ -39,14 +36,11 @@ pub fn run(c: Config) -> Result<(), Box<dyn Error>> {
         })
         .collect();
 
-    // Process
-    //let start = Instant::now();
     let result = process_files_in_parallel(file_paths, c.number_of_threads)?;
 
     let totals = Totals::new_from(&result.1, &result.0);
-    //println!("tiempo para procesar todo: {:?}", start.elapsed());
 
-    // Create structura JSON
+    // Create structure JSON
     let json_data = json!({
         "padron": "108672",
         "sites": result.0,

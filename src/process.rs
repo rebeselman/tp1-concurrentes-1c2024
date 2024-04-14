@@ -5,7 +5,6 @@ use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 use std::io::{self, BufReader, ErrorKind};
 use std::path::PathBuf;
-//use std::time::Instant;
 use std::{fs::File, io::BufRead};
 
 /// Fuction to process files in parallel
@@ -59,8 +58,6 @@ pub fn process_files_in_parallel(
 
 /// Returns a  (words_number, questions_number, hash map of tags) from a file
 fn process_file(reader: BufReader<File>) -> (usize, usize, HashMap<String, Tag>) {
-    //let start = Instant::now();
-    // tal vez conviene pasarle el bufer reader y que lea de a poco y abre menos archivos paralelamente
     let results = reader
         .lines()
         .par_bridge()
@@ -71,8 +68,6 @@ fn process_file(reader: BufReader<File>) -> (usize, usize, HashMap<String, Tag>)
         .reduce(
             || (0, 0, HashMap::new()),
             |(w_a, q_a, mut tags_a), (w_b, q_b, tags_b)| {
-                //let start = Instant::now();
-                //let merged_tags: HashMap<String, Tag> = merge_tag_maps(acc.2, res.2);
                 tags_b.iter().for_each(|(tag_name, tag)| {
                     tags_a
                         .entry(tag_name.to_string())
@@ -82,42 +77,30 @@ fn process_file(reader: BufReader<File>) -> (usize, usize, HashMap<String, Tag>)
                         })
                         .or_insert(tag.to_owned());
                 });
-
-                //println!("tiempo en mergear tags:{:?}", start.elapsed());
                 (w_a + w_b, q_a + q_b, tags_a)
             },
         );
-    //println!("tiempo en procesar info de sites {:?}", start.elapsed());
-
-    // match results{
-    //     Some(r) => r,
-    //     None => (0,0, HashMap::new())
-    // }
     results
 }
 
 /// Process a line and returns -> (words_number, questions_number, hash map of tags)
 fn process_line(line: String) -> (usize, usize, HashMap<String, Tag>) {
-    //let start = Instant::now();
     match serde_json::from_str::<Question>(&line) {
         Ok(question) => {
-            // cuento cantidad de palabras para esta pregunta
             let words_number = question
                 .texts
                 .par_iter()
                 .map(|c| c.split_whitespace().count())
                 .sum();
-            // obtengo cantidad de preguntas hasta ahora
 
             let mut hash_tag = HashMap::with_capacity(question.tags.len());
             for tag in &question.tags {
                 hash_tag.insert(tag.clone(), Tag::new_with(1, words_number));
             }
 
-            //println!("tiempo para procesar linea: {:?}", start.elapsed());
             (words_number, 1, hash_tag)
         }
-        // si hay error simplemente no se cuenta nada y luego se filtra
+
         Err(_) => (0, 0, HashMap::new()),
     }
 }

@@ -10,8 +10,6 @@ fn main() {
         process::exit(1);
     });
 
-    //println!("Number of threads {}", config.number_of_threads);
-
     if let Err(e) = run(config) {
         eprintln!("Application error: {e}");
         process::exit(1);
