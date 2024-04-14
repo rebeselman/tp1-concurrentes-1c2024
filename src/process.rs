@@ -5,7 +5,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 use std::io::{self, BufReader, ErrorKind};
 use std::path::PathBuf;
-use std::time::Instant;
+//use std::time::Instant;
 use std::{fs::File, io::BufRead};
 
 /// Fuction to process files in parallel
@@ -59,7 +59,7 @@ pub fn process_files_in_parallel(
 
 /// Returns a  (words_number, questions_number, hash map of tags) from a file
 fn process_file(reader: BufReader<File>) -> (usize, usize, HashMap<String, Tag>) {
-    let start = Instant::now();
+    //let start = Instant::now();
     // tal vez conviene pasarle el bufer reader y que lea de a poco y abre menos archivos paralelamente
     let results = reader
         .lines()
@@ -87,7 +87,7 @@ fn process_file(reader: BufReader<File>) -> (usize, usize, HashMap<String, Tag>)
                 (w_a + w_b, q_a + q_b, tags_a)
             },
         );
-    println!("tiempo en procesar info de sites {:?}", start.elapsed());
+    //println!("tiempo en procesar info de sites {:?}", start.elapsed());
 
     // match results{
     //     Some(r) => r,
