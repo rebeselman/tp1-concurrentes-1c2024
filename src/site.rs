@@ -1,6 +1,6 @@
-use crate::tag::Tag;
+use crate::{tag::Tag, utilities::top_10};
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, collections::HashMap};
+use std::collections::HashMap;
 
 /// It represent a site of stackexchange (a line of the data)
 /// The attributes are:
@@ -26,6 +26,26 @@ impl Site {
             chatty_tags: vec![],
         }
     }
+    pub fn new_with(
+        num_questions: usize,
+        num_words: usize,
+        tag_hash: HashMap<String, Tag>,
+    ) -> Site {
+        Site {
+            questions: num_questions,
+            words: num_words,
+            tags: tag_hash,
+            chatty_tags: vec![],
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        (self.questions == 0)
+            & (self.words == 0)
+            & (self.tags.is_empty())
+            & (self.chatty_tags.is_empty())
+    }
+
     /// add  to the number of questions
     pub fn sum_questions(&mut self, questions_number: usize) {
         self.questions += questions_number
@@ -37,11 +57,11 @@ impl Site {
     }
 
     /// modify values of tags
-    pub fn add_tags(&mut self, tags: &HashMap<String, Tag>) {
-        for e in tags.iter() {
-            self.tags.insert(e.0.to_owned(), e.1.to_owned());
-        }
-    }
+    // pub fn add_tags(&mut self, tags: &HashMap<String, Tag>) {
+    //     for e in tags.iter() {
+    //         self.tags.insert(e.0.to_owned(), e.1.to_owned());
+    //     }
+    // }
 
     pub fn obtain_tags(&self) -> HashMap<String, Tag> {
         self.tags.clone()
@@ -49,25 +69,11 @@ impl Site {
 
     /// Caculate_chatty_tags and set
     pub fn chatty_tags(&mut self) {
-        let mut tag_ratios: Vec<(&String, f64)> = self
+        let iter = self
             .tags
             .iter()
-            .map(|(name, tag)| (name, tag.words as f64 / tag.questions as f64))
-            .collect();
-
-        // order tags by ratio number_of_words/number_of_questions in descendent order
-        tag_ratios.sort_by(
-            |(_, ratio1), (_, ratio2)| match ratio2.partial_cmp(ratio1) {
-                Some(o) => o,
-                None => Ordering::Equal,
-            },
-        );
-
-        // take first ten tags
-        let top_10_tags: Vec<&String> = tag_ratios.iter().take(10).map(|(name, _)| *name).collect();
-
-        // set chatty tags
-        self.chatty_tags = top_10_tags.iter().map(|s| s.to_string()).collect();
+            .map(|(name, tag)| (tag.words as u32 / tag.questions as u32, String::from(name)));
+        self.chatty_tags = top_10(iter);
     }
 }
 
