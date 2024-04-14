@@ -1,7 +1,6 @@
 use crate::question::Question;
 use crate::site::Site;
 use crate::tag::Tag;
-use crate::utilities::merge_tag_maps;
 use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 use std::io::{self, BufReader, ErrorKind};
@@ -19,44 +18,48 @@ pub fn process_files_in_parallel(
         .build_global()
         .map_err(|_| ErrorKind::Other)?;
 
-    let mut sites = HashMap::new();
-    let mut tags: HashMap<String, Tag> = HashMap::new();
+    let (sites, tags) = filenames
+        .par_iter()
+        .map(|p| match File::open(p) {
+            Ok(f) => {
+                let (words_num, question_num, hash_tags) = process_file(BufReader::new(f));
+                let mut site = Site::new_with(question_num, words_num, hash_tags.to_owned());
 
-    for path in filenames {
-        let start = Instant::now();
-        let file = File::open(&path)?;
-        let reader = BufReader::new(file);
-        let (word_number, question_number, tags_for_site) = process_file(reader)?;
-        let name_site = path
-            .file_name()
-            .map_or_else(String::new, |s| s.to_string_lossy().to_string());
-        if !name_site.is_empty() {
-            // add tags
+                let name_site = p
+                    .file_name()
+                    .map_or_else(String::new, |s| s.to_string_lossy().to_string());
 
-            tags_for_site.iter().for_each(|(tag_name, tag)| {
-                tags.entry(tag_name.to_string())
-                    .and_modify(|t| {
-                        t.sum_questions(tag.questions);
-                        t.sum_words(tag.words)
-                    })
-                    .or_insert(tag.to_owned());
-            });
+                site.chatty_tags();
+                let mut sites_hash = HashMap::new();
+                sites_hash.insert(name_site, site);
 
-            // add site
-            let mut site = Site::new_with(question_number, word_number, tags_for_site);
-            site.chatty_tags();
-            sites.insert(name_site, site);
+                (sites_hash, hash_tags)
+            }
+            Err(_) => (HashMap::new(), HashMap::new()),
+        })
+        .reduce(
+            || (HashMap::new(), HashMap::new()),
+            |(mut sites_a, mut tags_a), (sites_b, tags_b)| {
+                sites_a.extend(sites_b);
+                tags_b.iter().for_each(|(tag_name, tag)| {
+                    tags_a
+                        .entry(tag_name.to_string())
+                        .and_modify(|t: &mut Tag| {
+                            t.sum_questions(tag.questions);
+                            t.sum_words(tag.words);
+                        })
+                        .or_insert(tag.to_owned());
+                });
+                (sites_a, tags_b)
+            },
+        );
 
-            println!("sites se procesó en:{:?}", start.elapsed());
-        }
-    }
     Ok((sites, tags))
 }
 
 /// Returns a  (words_number, questions_number, hash map of tags) from a file
-fn process_file(
-    reader: BufReader<File>,
-) -> Result<(usize, usize, HashMap<String, Tag>), io::Error> {
+fn process_file(reader: BufReader<File>) -> (usize, usize, HashMap<String, Tag>) {
+    let start = Instant::now();
     // tal vez conviene pasarle el bufer reader y que lea de a poco y abre menos archivos paralelamente
     let results = reader
         .lines()
@@ -65,16 +68,32 @@ fn process_file(
             Ok(line) => process_line(line),
             Err(_) => (0, 0, HashMap::new()),
         })
-        .filter(|res| !res.2.is_empty())
         .reduce(
             || (0, 0, HashMap::new()),
-            |acc, res| {
-                let merged_tags: HashMap<String, Tag> = merge_tag_maps(acc.2, res.2);
-                (res.0 + acc.0, res.1 + acc.1, merged_tags)
+            |(w_a, q_a, mut tags_a), (w_b, q_b, tags_b)| {
+                //let start = Instant::now();
+                //let merged_tags: HashMap<String, Tag> = merge_tag_maps(acc.2, res.2);
+                tags_b.iter().for_each(|(tag_name, tag)| {
+                    tags_a
+                        .entry(tag_name.to_string())
+                        .and_modify(|t: &mut Tag| {
+                            t.sum_questions(tag.questions);
+                            t.sum_words(tag.words);
+                        })
+                        .or_insert(tag.to_owned());
+                });
+
+                //println!("tiempo en mergear tags:{:?}", start.elapsed());
+                (w_a + w_b, q_a + q_b, tags_a)
             },
         );
+    println!("tiempo en procesar info de sites {:?}", start.elapsed());
 
-    Ok(results)
+    // match results{
+    //     Some(r) => r,
+    //     None => (0,0, HashMap::new())
+    // }
+    results
 }
 
 /// Process a line and returns -> (words_number, questions_number, hash map of tags)

@@ -45,7 +45,7 @@ pub fn run(c: Config) -> Result<(), Box<dyn Error>> {
     let totals = Totals::new_from(&result.1, &result.0);
     println!("tiempo para procesar todo: {:?}", start.elapsed());
 
-    // Crear la estructura JSON
+    // Create structura JSON
     let json_data = json!({
         "padron": 108672,
         "sites": result.0,
