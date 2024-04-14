@@ -48,7 +48,7 @@ pub fn run(c: Config) -> Result<(), Box<dyn Error>> {
 
     // Create structura JSON
     let json_data = json!({
-        "padron": 108672,
+        "padron": "108672",
         "sites": result.0,
         "tags": result.1,
         "totals": totals
