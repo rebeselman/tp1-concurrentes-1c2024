@@ -69,11 +69,12 @@ impl Site {
 
     /// Caculate_chatty_tags and set
     pub fn chatty_tags(&mut self) {
-        let iter = self
+        let map_tags: Vec<(String, f64)> = self
             .tags
             .iter()
-            .map(|(name, tag)| (tag.words as u32 / tag.questions as u32, String::from(name)));
-        self.chatty_tags = top_10(iter);
+            .map(|(name, tag)| (String::from(name), tag.words as f64 / tag.questions as f64))
+            .collect();
+        self.chatty_tags = top_10(map_tags);
     }
 }
 

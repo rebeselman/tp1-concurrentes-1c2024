@@ -1,22 +1,16 @@
-use std::collections::BinaryHeap;
+use std::cmp::Ordering;
 
-/// To obtain the top ten based on iterator
-pub fn top_10(iter: impl Iterator<Item = (u32, String)>) -> Vec<String> {
-    let mut heap = BinaryHeap::new();
+/// To obtain the top ten based on a vector
+pub fn top_10(mut list: Vec<(String, f64)>) -> Vec<String> {
+    list.sort_by(
+        |(_, ratio1), (_, ratio2)| match ratio2.partial_cmp(ratio1) {
+            Some(o) => o,
+            None => Ordering::Equal,
+        },
+    );
 
-    for (ratio, name) in iter {
-        if heap.len() < 10 {
-            heap.push((ratio, name));
-        } else if let Some(t) = heap.peek() {
-            if ratio > t.0 {
-                heap.pop();
-                heap.push((ratio, name));
-            }
-        }
-    }
-
-    heap.into_sorted_vec()
-        .into_iter()
-        .map(|x| x.1.clone())
+    list.iter()
+        .take(10)
+        .map(|(name, _)| String::from(name))
         .collect()
 }

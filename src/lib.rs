@@ -18,7 +18,7 @@ pub mod site;
 pub mod tag;
 pub mod totals;
 
-/// Function which runs the application
+/// Function that runs the application
 pub fn run(c: Config) -> Result<(), Box<dyn Error>> {
     Command::new("/bin/sh").arg("download_data.sh").output()?;
 
