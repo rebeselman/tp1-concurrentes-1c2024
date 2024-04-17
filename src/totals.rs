@@ -1,7 +1,7 @@
 //! It represents the most "chatty" sites and tags of a set of files with information from StackExchange.
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use crate::{site::Site, tag::Tag, utilities::top_10};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// The attributes are:
 ///     questions: the 10 sites with most ratio words/questions

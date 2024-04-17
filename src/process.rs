@@ -108,9 +108,9 @@ fn process_line(line: String) -> (usize, usize, HashMap<String, Tag>) {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
@@ -123,19 +123,24 @@ mod tests {
         tags.insert(String::from("mars"), Tag::new_with(1, 8));
         assert_eq!(num_words, 8);
         assert_eq!(num_questions, 1);
-        assert_eq!(hash_tags, tags);      
+        assert_eq!(hash_tags, tags);
     }
-    
+
     #[test]
     fn test_process_file() {
-        // Simular diferentes situaciones de concurrencia y verificar el resultado
-        // utilizando assert_eq!() o cualquier otra macro de aserción.
+        let file = File::open("test_file.jsonl").expect("Error writing a file test");
+        let (num_words_of_file, number_questions_of_file, hash_map) =
+            process_file(BufReader::new(file));
+
+        assert_eq!(num_words_of_file, 22);
+
+        assert_eq!(number_questions_of_file, 2);
+
+        let mut hash_tags = HashMap::new();
+
+        hash_tags.insert(String::from("hungry"), Tag::new_with(2, 22));
+        hash_tags.insert(String::from("food"), Tag::new_with(2, 22));
+
+        assert_eq!(hash_map, hash_tags);
     }
-    
-    #[test]
-    fn test_process_files() {
-        // Ejecutar la aplicación completa y verificar el resultado final
-        // utilizando assert_eq!() o cualquier otra macro de aserción.
-    }
-    
 }
