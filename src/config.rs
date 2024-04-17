@@ -13,7 +13,7 @@ impl Config {
         if args.is_empty() {
             return Err("not enough arguments".to_owned());
         }
-        //println!("arg: {:?}", args);
+    
         let number_of_threads = args[1]
             .parse::<usize>()
             .map_err(|error| error.to_string())?;

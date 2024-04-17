@@ -40,7 +40,7 @@ pub fn run(c: Config) -> Result<(), Box<dyn Error>> {
 
     let totals = Totals::new_from(&result.1, &result.0);
 
-    // Create structure JSON
+    // Create structure json
     let json_data = json!({
         "padron": "108672",
         "sites": result.0,

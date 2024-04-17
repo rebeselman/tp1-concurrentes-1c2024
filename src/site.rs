@@ -1,8 +1,8 @@
+//! It represent a site of stackexchange (a line of the data)
 use crate::{tag::Tag, utilities::top_10};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// It represent a site of stackexchange (a line of the data)
 /// The attributes are:
 ///     questions: total number of questions to this site,
 ///     words: total number of words to this site,
@@ -56,13 +56,7 @@ impl Site {
         self.words += words_number
     }
 
-    /// modify values of tags
-    // pub fn add_tags(&mut self, tags: &HashMap<String, Tag>) {
-    //     for e in tags.iter() {
-    //         self.tags.insert(e.0.to_owned(), e.1.to_owned());
-    //     }
-    // }
-
+    /// Obtain a copy of the tags of this site
     pub fn obtain_tags(&self) -> HashMap<String, Tag> {
         self.tags.clone()
     }

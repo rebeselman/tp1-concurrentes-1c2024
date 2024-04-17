@@ -7,7 +7,9 @@ use std::io::{self, BufReader, ErrorKind};
 use std::path::PathBuf;
 use std::{fs::File, io::BufRead};
 
-/// Fuction to process files in parallel
+/// Fuction to process a vector of filenames in parallel with a number of threads.
+/// Returns -> (Hahsmap of sites, Hashmap of tags)
+/// Where a the key is the name of that site or tag.
 pub fn process_files_in_parallel(
     filenames: Vec<PathBuf>,
     number_of_threads: usize,
@@ -56,7 +58,8 @@ pub fn process_files_in_parallel(
     Ok((sites, tags))
 }
 
-/// Returns a  (words_number, questions_number, hash map of tags) from a file
+/// Process a file
+/// Returns -> (number of words of the file, number of questions of the file,  HashMap of Tags of the file)
 fn process_file(reader: BufReader<File>) -> (usize, usize, HashMap<String, Tag>) {
     let results = reader
         .lines()
@@ -83,7 +86,7 @@ fn process_file(reader: BufReader<File>) -> (usize, usize, HashMap<String, Tag>)
     results
 }
 
-/// Process a line and returns -> (words_number, questions_number, hash map of tags)
+/// Process a line and returns -> (number of words in line, number of lines in a line, hash map of tags of that line)
 fn process_line(line: String) -> (usize, usize, HashMap<String, Tag>) {
     match serde_json::from_str::<Question>(&line) {
         Ok(question) => {
@@ -103,4 +106,36 @@ fn process_line(line: String) -> (usize, usize, HashMap<String, Tag>) {
 
         Err(_) => (0, 0, HashMap::new()),
     }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_process_line() {
+        let json_data = String::from("{\"texts\": [\"why aliens exist?\", \"i wonder why aliens exist\"], \"tags\": [\"aliens\", \"ovni\", \"mars\"]}");
+        let (num_words, num_questions, hash_tags) = process_line(json_data);
+        let mut tags: HashMap<String, Tag> = HashMap::new();
+        tags.insert(String::from("aliens"), Tag::new_with(1, 8));
+        tags.insert(String::from("ovni"), Tag::new_with(1, 8));
+        tags.insert(String::from("mars"), Tag::new_with(1, 8));
+        assert_eq!(num_words, 8);
+        assert_eq!(num_questions, 1);
+        assert_eq!(hash_tags, tags);      
+    }
+    
+    #[test]
+    fn test_process_file() {
+        // Simular diferentes situaciones de concurrencia y verificar el resultado
+        // utilizando assert_eq!() o cualquier otra macro de aserción.
+    }
+    
+    #[test]
+    fn test_process_files() {
+        // Ejecutar la aplicación completa y verificar el resultado final
+        // utilizando assert_eq!() o cualquier otra macro de aserción.
+    }
+    
 }
